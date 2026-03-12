@@ -1,0 +1,36 @@
+package com.proyecto.presionmonitorapp.util;
+
+import java.sql.Connection;
+import java.sql.DriverManager;
+import java.sql.SQLException;
+
+public final class DatabaseConnection {
+
+    private static volatile DatabaseConnection instance;
+    private Connection connection;
+
+    private static final String URL =
+            "jdbc:mysql://localhost:3306/db_presion_monitor?serverTimezone=UTC";
+    private static final String USER = "user_presion";
+    private static final String PASSWORD = "contrasena2026!";
+
+    private DatabaseConnection() {}
+
+    public static DatabaseConnection getInstance() {
+        if (instance == null) {
+            synchronized (DatabaseConnection.class) {
+                if (instance == null) {
+                    instance = new DatabaseConnection();
+                }
+            }
+        }
+        return instance;
+    }
+
+    public Connection getConnection() throws SQLException {
+        if (connection == null || connection.isClosed()) {
+            connection = DriverManager.getConnection(URL, USER, PASSWORD);
+        }
+        return connection;
+    }
+}
