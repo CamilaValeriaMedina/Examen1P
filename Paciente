@@ -1,0 +1,67 @@
+package com.proyecto.presionmonitorapp.modelo;
+
+import javafx.beans.property.*;
+import java.time.LocalDate;
+
+public class Paciente {
+    private final IntegerProperty id = new SimpleIntegerProperty();
+    private final StringProperty nombres = new SimpleStringProperty();
+    private final StringProperty apellidos = new SimpleStringProperty();
+    private final ObjectProperty<LocalDate> fechaNacimiento = new SimpleObjectProperty<>();
+    private final StringProperty genero = new SimpleStringProperty();
+    private final DoubleProperty peso = new SimpleDoubleProperty(); // en kg
+    private final DoubleProperty altura = new SimpleDoubleProperty(); // en cm
+
+    public Paciente() {}
+
+    public Paciente(int id, String nombres, String apellidos, LocalDate fechaNacimiento,
+                    String genero, double peso, double altura) {
+        setId(id);
+        setNombres(nombres);
+        setApellidos(apellidos);
+        setFechaNacimiento(fechaNacimiento);
+        setGenero(genero);
+        setPeso(peso);
+        setAltura(altura);
+    }
+
+    public int getId() { return id.get(); }
+    public void setId(int id) { this.id.set(id); }
+    public IntegerProperty idProperty() { return id; }
+
+    public String getNombres() { return nombres.get(); }
+    public void setNombres(String nombres) { this.nombres.set(nombres); }
+    public StringProperty nombresProperty() { return nombres; }
+
+    public String getApellidos() { return apellidos.get(); }
+    public void setApellidos(String apellidos) { this.apellidos.set(apellidos); }
+    public StringProperty apellidosProperty() { return apellidos; }
+
+    public String getNombreCompleto() {
+        return getNombres() + " " + getApellidos();
+    }
+
+    public LocalDate getFechaNacimiento() { return fechaNacimiento.get(); }
+    public void setFechaNacimiento(LocalDate fecha) { this.fechaNacimiento.set(fecha); }
+    public ObjectProperty<LocalDate> fechaNacimientoProperty() { return fechaNacimiento; }
+
+    public String getGenero() { return genero.get(); }
+    public void setGenero(String genero) { this.genero.set(genero); }
+    public StringProperty generoProperty() { return genero; }
+
+    public double getPeso() { return peso.get(); }
+    public void setPeso(double peso) { this.peso.set(peso); }
+    public DoubleProperty pesoProperty() { return peso; }
+
+    public double getAltura() { return altura.get(); }
+    public void setAltura(double altura) { this.altura.set(altura); }
+    public DoubleProperty alturaProperty() { return altura; }
+
+    // para calcular edad
+    public int getEdad() {
+        if (getFechaNacimiento() != null) {
+            return LocalDate.now().getYear() - getFechaNacimiento().getYear();
+        }
+        return 0;
+    }
+}
