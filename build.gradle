@@ -1,0 +1,74 @@
+plugins {
+    id 'java'
+    id 'application'
+    id 'org.openjfx.javafxplugin' version '0.1.0'
+    id 'com.github.johnrengelman.shadow' version '8.1.1'
+}
+
+group = 'com.proyecto'
+version = '1.0-SNAPSHOT'
+
+repositories {
+    mavenCentral()
+}
+
+java {
+    sourceCompatibility = JavaVersion.VERSION_21
+    targetCompatibility = JavaVersion.VERSION_21
+}
+
+javafx {
+    version = "21.0.10"
+    modules = [ 'javafx.controls', 'javafx.fxml' ]
+}
+
+dependencies {
+    // MySQL Connector
+    implementation 'mysql:mysql-connector-java:8.0.33'
+
+    // implementation 'com.mysql:mysql-connector-j:9.1.0'
+
+    // Ikonli
+    implementation 'org.kordamp.ikonli:ikonli-core:12.3.1'
+    implementation 'org.kordamp.ikonli:ikonli-javafx:12.3.1'
+    implementation 'org.kordamp.ikonli:ikonli-fontawesome5-pack:12.3.1'
+    implementation 'org.kordamp.ikonli:ikonli-materialdesign2-pack:12.3.1'
+
+    // BootstrapFX
+    implementation 'org.kordamp.bootstrapfx:bootstrapfx-core:0.4.0'
+
+    // logging
+    implementation 'org.slf4j:slf4j-simple:2.0.9'
+
+    // testing
+    testImplementation 'org.junit.jupiter:junit-jupiter:5.9.2'
+    testRuntimeOnly 'org.junit.platform:junit-platform-launcher'
+}
+
+application {
+    mainClass = 'com.proyecto.presionmonitorapp.App'
+}
+
+test {
+    useJUnitPlatform()
+}
+
+// para copiar recursos
+tasks.withType(ProcessResources) {
+    duplicatesStrategy = DuplicatesStrategy.INCLUDE
+}
+
+shadowJar {
+    archiveBaseName.set('presionmonitor')
+    archiveClassifier.set('')
+    archiveVersion.set(version)
+
+    manifest {
+        attributes 'Main-Class': application.mainClass
+    }
+
+    // archivos de firma
+    exclude 'META-INF/*.SF'
+    exclude 'META-INF/*.DSA'
+    exclude 'META-INF/*.RSA'
+}
