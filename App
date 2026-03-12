@@ -1,0 +1,71 @@
+package com.proyecto.presionmonitorapp;
+
+import javafx.application.Application;
+import javafx.fxml.FXMLLoader;
+import javafx.scene.Scene;
+import javafx.stage.Stage;
+import javafx.scene.Parent;
+import com.proyecto.presionmonitorapp.util.DatabaseConnection;
+import java.sql.Connection;
+import java.sql.SQLException;
+import java.sql.Statement;
+import java.sql.ResultSet;
+
+public class App extends Application {
+
+    @Override
+    public void start(Stage primaryStage) throws Exception {
+        probarConexionMySQL();
+
+        FXMLLoader loader = new FXMLLoader(getClass().getResource("/vista/principal.fxml"));
+        Parent root = loader.load();
+
+        Scene scene = new Scene(root);
+        scene.getStylesheets().add("org/kordamp/bootstrapfx/bootstrapfx.css");
+
+        try {
+            String css = getClass().getResource("/css/estilos.css").toExternalForm();
+            if (css != null) {
+                scene.getStylesheets().add(css);
+            }
+        } catch (Exception e) {
+            System.out.println("CSS no encontrado, continuando sin estilos personalizados");
+        }
+
+        primaryStage.setTitle("Monitor de Presión Arterial");
+        primaryStage.setScene(scene);
+        primaryStage.setResizable(true);
+        primaryStage.show();
+    }
+
+    private void probarConexionMySQL() {
+        System.out.println("Probando conexión...");
+        try {
+            Connection conn = DatabaseConnection.getInstance().getConnection();
+            if (conn != null && !conn.isClosed()) {
+                System.out.println("Conexión exitosa");
+
+                // consulta simple
+                Statement stmt = conn.createStatement();
+                ResultSet rs = stmt.executeQuery("SELECT COUNT(*) as total FROM pacientes");
+                if (rs.next()) {
+                    System.out.println("Total pacientes: " + rs.getInt("total"));
+                }
+
+                // mostrar información del servidor
+                rs = stmt.executeQuery("SELECT VERSION() as version");
+                if (rs.next()) {
+                    System.out.println("Versión MySQL: " + rs.getString("version"));
+                }
+            }
+        } catch (SQLException e) {
+            System.err.println("Error de conexión: " + e.getMessage());
+            System.err.println("   Verifica que MySQL 9.6 esté corriendo");
+            System.err.println("   y que las credenciales sean correctas");
+        }
+    }
+
+    public static void main(String[] args) {
+        launch(args);
+    }
+}
