@@ -1,0 +1,204 @@
+package com.proyecto.presionmonitorapp.dao;
+
+import com.proyecto.presionmonitorapp.modelo.Medicion;
+import com.proyecto.presionmonitorapp.modelo.Paciente;
+import com.proyecto.presionmonitorapp.util.DatabaseConnection;
+import javafx.collections.FXCollections;
+import javafx.collections.ObservableList;
+import java.sql.*;
+import java.time.LocalDate;
+
+public class MedicionDAOImp implements MedicionDAO {
+
+    private final PacienteDAO pacienteDAO = new PacienteDAOImp();
+
+    @Override
+    public ObservableList<Medicion> listarPorPaciente(int pacienteId) {
+        ObservableList<Medicion> lista = FXCollections.observableArrayList();
+        String sql = "SELECT * FROM mediciones WHERE paciente_id = ? ORDER BY fecha_hora DESC";
+
+        try (Connection conn = DatabaseConnection.getInstance().getConnection();
+             PreparedStatement pstmt = conn.prepareStatement(sql)) {
+
+            pstmt.setInt(1, pacienteId);
+            ResultSet rs = pstmt.executeQuery();
+
+            Paciente paciente = pacienteDAO.buscarPorId(pacienteId);
+            String nombrePaciente = (paciente != null) ? paciente.getNombreCompleto() : "";
+
+            while (rs.next()) {
+                Medicion m = new Medicion(
+                        rs.getInt("id"),
+                        rs.getInt("paciente_id"),
+                        rs.getInt("presion_sistolica"),
+                        rs.getInt("presion_diastolica"),
+                        rs.getInt("cantidad_pulsos"),
+                        rs.getTimestamp("fecha_hora").toLocalDateTime()
+                );
+                m.setNombrePaciente(nombrePaciente);
+                lista.add(m);
+            }
+        } catch (SQLException e) {
+            e.printStackTrace();
+        }
+        return lista;
+    }
+
+    @Override
+    public void insertar(Medicion medicion) throws SQLException {
+        String sql = "INSERT INTO mediciones (paciente_id, presion_sistolica, presion_diastolica, " +
+                "cantidad_pulsos, fecha_hora) VALUES (?, ?, ?, ?, ?)";
+
+        try (Connection conn = DatabaseConnection.getInstance().getConnection();
+             PreparedStatement pstmt = conn.prepareStatement(sql, Statement.RETURN_GENERATED_KEYS)) {
+
+            pstmt.setInt(1, medicion.getPacienteId());
+            pstmt.setInt(2, medicion.getPresionSistolica());
+            pstmt.setInt(3, medicion.getPresionDiastolica());
+            pstmt.setInt(4, medicion.getCantidadPulsos());
+            pstmt.setTimestamp(5, Timestamp.valueOf(medicion.getFechaHora()));
+
+            pstmt.executeUpdate();
+
+            ResultSet rs = pstmt.getGeneratedKeys();
+            if (rs.next()) {
+                medicion.setId(rs.getInt(1));
+            }
+        }
+    }
+
+    @Override
+    public void actualizar(Medicion medicion) throws SQLException {
+        String sql = "UPDATE mediciones SET presion_sistolica=?, presion_diastolica=?, " +
+                "cantidad_pulsos=?, fecha_hora=? WHERE id=?";
+
+        try (Connection conn = DatabaseConnection.getInstance().getConnection();
+             PreparedStatement pstmt = conn.prepareStatement(sql)) {
+
+            pstmt.setInt(1, medicion.getPresionSistolica());
+            pstmt.setInt(2, medicion.getPresionDiastolica());
+            pstmt.setInt(3, medicion.getCantidadPulsos());
+            pstmt.setTimestamp(4, Timestamp.valueOf(medicion.getFechaHora()));
+            pstmt.setInt(5, medicion.getId());
+
+            pstmt.executeUpdate();
+        }
+    }
+
+    @Override
+    public void eliminar(int id) throws SQLException {
+        String sql = "DELETE FROM mediciones WHERE id=?";
+
+        try (Connection conn = DatabaseConnection.getInstance().getConnection();
+             PreparedStatement pstmt = conn.prepareStatement(sql)) {
+            pstmt.setInt(1, id);
+            pstmt.executeUpdate();
+        }
+    }
+
+    @Override
+    public ObservableList<Medicion> listarTodas() {
+        ObservableList<Medicion> lista = FXCollections.observableArrayList();
+        String sql = "SELECT m.*, p.nombres, p.apellidos " +
+                "FROM mediciones m " +
+                "JOIN pacientes p ON m.paciente_id = p.id " +
+                "ORDER BY m.fecha_hora DESC";
+
+        try (Connection conn = DatabaseConnection.getInstance().getConnection();
+             Statement stmt = conn.createStatement();
+             ResultSet rs = stmt.executeQuery(sql)) {
+
+            while (rs.next()) {
+                Medicion m = new Medicion(
+                        rs.getInt("id"),
+                        rs.getInt("paciente_id"),
+                        rs.getInt("presion_sistolica"),
+                        rs.getInt("presion_diastolica"),
+                        rs.getInt("cantidad_pulsos"),
+                        rs.getTimestamp("fecha_hora").toLocalDateTime()
+                );
+                m.setNombrePaciente(rs.getString("nombres") + " " + rs.getString("apellidos"));
+                lista.add(m);
+            }
+        } catch (SQLException e) {
+            e.printStackTrace();
+        }
+        return lista;
+    }
+
+    @Override
+    public Promedios calcularPromedios(int pacienteId) {
+        String sql = "SELECT AVG(presion_sistolica) as prom_sis, " +
+                "AVG(presion_diastolica) as prom_dias, " +
+                "AVG(cantidad_pulsos) as prom_pulso " +
+                "FROM mediciones WHERE paciente_id = ?";
+
+        try (Connection conn = DatabaseConnection.getInstance().getConnection();
+             PreparedStatement pstmt = conn.prepareStatement(sql)) {
+
+            pstmt.setInt(1, pacienteId);
+            ResultSet rs = pstmt.executeQuery();
+
+            if (rs.next()) {
+                return new Promedios(
+                        rs.getDouble("prom_sis"),
+                        rs.getDouble("prom_dias"),
+                        rs.getDouble("prom_pulso")
+                );
+            }
+        } catch (SQLException e) {
+            e.printStackTrace();
+        }
+        return new Promedios(0, 0, 0);
+    }
+
+    @Override
+    public Promedios calcularPromediosPorFechas(LocalDate fechaInicio, LocalDate fechaFin) {
+        String sql = "SELECT AVG(presion_sistolica) as prom_sis, " +
+                "AVG(presion_diastolica) as prom_dias, " +
+                "AVG(cantidad_pulsos) as prom_pulso " +
+                "FROM mediciones WHERE DATE(fecha_hora) BETWEEN ? AND ?";
+
+        try (Connection conn = DatabaseConnection.getInstance().getConnection();
+             PreparedStatement pstmt = conn.prepareStatement(sql)) {
+
+            pstmt.setDate(1, Date.valueOf(fechaInicio));
+            pstmt.setDate(2, Date.valueOf(fechaFin));
+            ResultSet rs = pstmt.executeQuery();
+
+            if (rs.next()) {
+                return new Promedios(
+                        rs.getDouble("prom_sis"),
+                        rs.getDouble("prom_dias"),
+                        rs.getDouble("prom_pulso")
+                );
+            }
+        } catch (SQLException e) {
+            e.printStackTrace();
+        }
+        return new Promedios(0, 0, 0);
+    }
+
+    // Clase interna para manejar promedios
+    public static class Promedios {
+        private final double sistolica;
+        private final double diastolica;
+        private final double pulsos;
+
+        public Promedios(double sistolica, double diastolica, double pulsos) {
+            this.sistolica = sistolica;
+            this.diastolica = diastolica;
+            this.pulsos = pulsos;
+        }
+
+        public double getSistolica() { return sistolica; }
+        public double getDiastolica() { return diastolica; }
+        public double getPulsos() { return pulsos; }
+
+        @Override
+        public String toString() {
+            return String.format("SIS: %.1f | DIA: %.1f | PUL: %.1f",
+                    sistolica, diastolica, pulsos);
+        }
+    }
+}
