@@ -1,0 +1,179 @@
+package com.proyecto.presionmonitorapp.servicio;
+
+import com.proyecto.presionmonitorapp.modelo.Paciente;
+import javafx.scene.image.Image;
+import java.util.HashMap;
+import java.util.Map;
+
+// para el cálculo y manejo del IMC
+
+public class IMCServicio {
+
+    // para las categorías de IMC
+    public static final String BAJO_PESO = "Bajo peso";
+    public static final String NORMAL = "Normal";
+    public static final String SOBREPESO = "Sobrepeso";
+    public static final String OBESIDAD = "Obesidad";
+
+    // rangos de IMC
+    private static final double LIMITE_BAJO_PESO = 18.5;
+    private static final double LIMITE_NORMAL = 25.0;
+    private static final double LIMITE_SOBREPESO = 30.0;
+
+    public double calcularIMC(double peso, double altura) {
+        if (peso <= 0 || altura <= 0) {
+            return 0;
+        }
+
+        double alturaMetros = altura / 100;
+        return peso / (alturaMetros * alturaMetros);
+    }
+
+    // para el IMC de un paciente
+    public double calcularIMC(Paciente paciente) {
+        if (paciente == null) {
+            return 0;
+        }
+        return calcularIMC(paciente.getPeso(), paciente.getAltura());
+    }
+
+    // para la categoría del IMC según el valor
+    public String obtenerCategoria(double imc) {
+        if (imc < LIMITE_BAJO_PESO) {
+            return BAJO_PESO;
+        } else if (imc < LIMITE_NORMAL) {
+            return NORMAL;
+        } else if (imc < LIMITE_SOBREPESO) {
+            return SOBREPESO;
+        } else {
+            return OBESIDAD;
+        }
+    }
+
+    // para la categoría del IMC de un paciente
+    public String obtenerCategoria(Paciente paciente) {
+        double imc = calcularIMC(paciente);
+        return obtenerCategoria(imc);
+    }
+
+    public String obtenerIcono(String categoria) {
+        Map<String, String> iconos = new HashMap<>();
+        iconos.put(BAJO_PESO, "fas-frown");
+        iconos.put(NORMAL, "fas-smile");
+        iconos.put(SOBREPESO, "fas-meh");
+        iconos.put(OBESIDAD, "fas-dizzy");
+
+        return iconos.getOrDefault(categoria, "fas-question-circle");
+    }
+
+    public String obtenerColorIcono(String categoria) {
+        Map<String, String> colores = new HashMap<>();
+        colores.put(BAJO_PESO, "#f39c12");     //  naranja
+        colores.put(NORMAL, "#27ae60");         // verde
+        colores.put(SOBREPESO, "#e67e22");      // naranja oscuro
+        colores.put(OBESIDAD, "#c0392b");       // rojo
+
+        return colores.getOrDefault(categoria, "#7f8c8d"); // Gris por defecto
+    }
+
+    public String obtenerDescripcion(String categoria) {
+        Map<String, String> descripciones = new HashMap<>();
+        descripciones.put(BAJO_PESO,
+                "Peso inferior al saludable. Se recomienda consultar a un nutricionista " +
+                        "para aumentar de peso de forma saludable.");
+
+        descripciones.put(NORMAL,
+                "Peso saludable. Mantenga una dieta equilibrada y ejercicio regular " +
+                        "para conservar este rango.");
+
+        descripciones.put(SOBREPESO,
+                "Exceso de peso. Se recomienda aumentar la actividad física y mejorar " +
+                        "los hábitos alimenticios.");
+
+        descripciones.put(OBESIDAD,
+                "Obesidad. Es importante consultar a un médico para un plan de manejo " +
+                        "de peso personalizado.");
+
+        return descripciones.getOrDefault(categoria, "Categoría no reconocida");
+    }
+
+    public String obtenerColorFondo(String categoria) {
+        Map<String, String> coloresFondo = new HashMap<>();
+        coloresFondo.put(BAJO_PESO, "#fff3cd");     // Amarillo claro
+        coloresFondo.put(NORMAL, "#d4edda");         // Verde claro
+        coloresFondo.put(SOBREPESO, "#ffe5b4");      // Naranja claro
+        coloresFondo.put(OBESIDAD, "#f8d7da");       // Rojo claro
+
+        return coloresFondo.getOrDefault(categoria, "#ffffff");
+    }
+
+
+    public String formatearIMC(double imc) {
+        String categoria = obtenerCategoria(imc);
+        return String.format("IMC: %.1f (%s)", imc, categoria);
+    }
+
+
+    public String formatearIMC(Paciente paciente) {
+        double imc = calcularIMC(paciente);
+        return formatearIMC(imc);
+    }
+
+    public boolean esSaludable(double imc) {
+        return imc >= LIMITE_BAJO_PESO && imc < LIMITE_NORMAL;
+    }
+
+
+    public double[] calcularPesoIdeal(double altura) {
+        double alturaMetros = altura / 100;
+        double pesoMinimo = LIMITE_BAJO_PESO * (alturaMetros * alturaMetros);
+        double pesoMaximo = LIMITE_NORMAL * (alturaMetros * alturaMetros);
+
+        return new double[]{pesoMinimo, pesoMaximo};
+    }
+
+    public String obtenerRiesgo(String categoria) {
+        Map<String, String> riesgos = new HashMap<>();
+        riesgos.put(BAJO_PESO, "Moderado");
+        riesgos.put(NORMAL, "Bajo");
+        riesgos.put(SOBREPESO, "Moderado");
+        riesgos.put(OBESIDAD, "Alto");
+
+        return riesgos.getOrDefault(categoria, "Desconocido");
+    }
+
+    public String[] obtenerRecomendaciones(String categoria) {
+        switch (categoria) {
+            case BAJO_PESO:
+                return new String[]{
+                        "Incrementar consumo de calorías saludables",
+                        "Incluir proteínas en cada comida",
+                        "Realizar ejercicios de fuerza",
+                        "Consultar a un nutricionista"
+                };
+            case NORMAL:
+                return new String[]{
+                        "Mantener dieta equilibrada",
+                        "Ejercicio regular (30 min/día)",
+                        "Control periódico del peso",
+                        "Hidratación adecuada"
+                };
+            case SOBREPESO:
+                return new String[]{
+                        "Reducir consumo de azúcares y grasas",
+                        "Aumentar actividad física",
+                        "Comer porciones moderadas",
+                        "Evitar alimentos procesados"
+                };
+            case OBESIDAD:
+                return new String[]{
+                        "Consulta médica especializada",
+                        "Plan de alimentación supervisado",
+                        "Ejercicio de bajo impacto",
+                        "Seguimiento profesional"
+                };
+            default:
+                return new String[]{"Sin recomendaciones específicas"};
+        }
+    }
+}
