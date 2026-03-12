@@ -1,0 +1,28 @@
+package com.proyecto.presionmonitorapp.validacion;
+
+import com.proyecto.presionmonitorapp.modelo.Paciente;
+
+public class PacienteValidacion {
+
+    public ResultadoValidacion validar(Paciente p) {
+        if (p.getNombres() == null || p.getNombres().trim().isEmpty()) {
+            return ResultadoValidacion.error("El nombre es obligatorio");
+        }
+        if (p.getApellidos() == null || p.getApellidos().trim().isEmpty()) {
+            return ResultadoValidacion.error("Los apellidos son obligatorios");
+        }
+        if (p.getFechaNacimiento() == null) {
+            return ResultadoValidacion.error("La fecha de nacimiento es obligatoria");
+        }
+        if (p.getGenero() == null || p.getGenero().isEmpty()) {
+            return ResultadoValidacion.error("El género es obligatorio");
+        }
+        if (p.getPeso() <= 0) {
+            return ResultadoValidacion.error("El peso debe ser mayor a 0");
+        }
+        if (p.getAltura() <= 0) {
+            return ResultadoValidacion.error("La altura debe ser mayor a 0");
+        }
+        return ResultadoValidacion.exito();
+    }
+}
