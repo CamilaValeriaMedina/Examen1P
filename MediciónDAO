@@ -1,0 +1,18 @@
+package com.proyecto.presionmonitorapp.dao;
+
+import com.proyecto.presionmonitorapp.modelo.Medicion;
+import javafx.collections.ObservableList;
+import java.sql.SQLException;
+import java.time.LocalDate;
+
+public interface MedicionDAO {
+    ObservableList<Medicion> listarPorPaciente(int pacienteId) throws SQLException;
+    void insertar(Medicion medicion) throws SQLException;
+    void actualizar(Medicion medicion) throws SQLException;
+    void eliminar(int id) throws SQLException;
+    ObservableList<Medicion> listarTodas() throws SQLException;
+
+    // Métodos especiales para estadísticas
+    MedicionDAOImp.Promedios calcularPromedios(int pacienteId) throws SQLException;
+    MedicionDAOImp.Promedios calcularPromediosPorFechas(LocalDate inicio, LocalDate fin) throws SQLException;
+}
