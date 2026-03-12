@@ -1,0 +1,66 @@
+package com.proyecto.presionmonitorapp.servicio;
+
+import com.proyecto.presionmonitorapp.dao.MedicionDAO;
+import com.proyecto.presionmonitorapp.dao.MedicionDAOImp;
+import com.proyecto.presionmonitorapp.modelo.Medicion;
+import com.proyecto.presionmonitorapp.validacion.MedicionValidacion;
+import com.proyecto.presionmonitorapp.validacion.ResultadoValidacion;
+import javafx.collections.ObservableList;
+
+import java.sql.SQLException;
+import java.time.LocalDate;
+
+public class MedicionServicio {
+
+    private final MedicionDAO medicionDAO = new MedicionDAOImp();
+    private final MedicionValidacion validacion = new MedicionValidacion();
+
+    public ObservableList<Medicion> obtenerMedicionesPorPaciente(int pacienteId) throws SQLException {
+        return medicionDAO.listarPorPaciente(pacienteId);
+    }
+
+    public ResultadoValidacion guardarMedicion(Medicion medicion) {
+        ResultadoValidacion resultado = validacion.validar(medicion);
+        if (!resultado.isValido()) {
+            return resultado;
+        }
+
+        try {
+            medicionDAO.insertar(medicion);
+            return ResultadoValidacion.exito("Medición guardada correctamente");
+        } catch (SQLException e) {
+            return ResultadoValidacion.error("Error de BD: " + e.getMessage());
+        }
+    }
+
+    public ResultadoValidacion actualizarMedicion(Medicion medicion) {
+        ResultadoValidacion resultado = validacion.validar(medicion);
+        if (!resultado.isValido()) {
+            return resultado;
+        }
+
+        try {
+            medicionDAO.actualizar(medicion);
+            return ResultadoValidacion.exito("Medición actualizada correctamente");
+        } catch (SQLException e) {
+            return ResultadoValidacion.error("Error de BD: " + e.getMessage());
+        }
+    }
+
+    public ResultadoValidacion eliminarMedicion(int id) {
+        try {
+            medicionDAO.eliminar(id);
+            return ResultadoValidacion.exito("Medición eliminada correctamente");
+        } catch (SQLException e) {
+            return ResultadoValidacion.error("Error al eliminar: " + e.getMessage());
+        }
+    }
+
+    public MedicionDAOImp.Promedios calcularPromedios(int pacienteId) throws SQLException {
+        return medicionDAO.calcularPromedios(pacienteId);
+    }
+
+    public MedicionDAOImp.Promedios calcularPromediosPorFechas(LocalDate inicio, LocalDate fin) throws SQLException {
+        return medicionDAO.calcularPromediosPorFechas(inicio, fin);
+    }
+}
