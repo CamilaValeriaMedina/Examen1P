@@ -1,0 +1,616 @@
+package com.proyecto.presionmonitorapp.controlador;
+
+import com.proyecto.presionmonitorapp.modelo.*;
+import com.proyecto.presionmonitorapp.servicio.*;
+import com.proyecto.presionmonitorapp.util.AlertasUtil;
+import com.proyecto.presionmonitorapp.validacion.ResultadoValidacion;
+import com.proyecto.presionmonitorapp.dao.MedicionDAOImp;
+import javafx.collections.FXCollections;
+import javafx.collections.ObservableList;
+import javafx.fxml.FXML;
+import javafx.fxml.Initializable;
+import javafx.scene.control.*;
+import javafx.scene.control.cell.PropertyValueFactory;
+import javafx.util.Callback;
+import javafx.scene.control.TableCell;
+import org.kordamp.ikonli.javafx.FontIcon;
+
+import java.net.URL;
+import java.sql.SQLException;
+import java.time.LocalDate;
+import java.time.LocalDateTime;
+import java.time.format.DateTimeFormatter;
+import java.util.ResourceBundle;
+import javafx.scene.image.Image;
+import javafx.scene.image.ImageView;
+
+public class PrincipalController implements Initializable {
+
+    // servicios
+    private final PacienteServicio pacienteServicio = new PacienteServicio();
+    private final MedicionServicio medicionServicio = new MedicionServicio();
+    private final EstadisticaServicio estadisticaServicio = new EstadisticaServicio();
+
+    // variables de estado
+    private Paciente pacienteSeleccionado = null;
+    private Medicion medicionEnEdicion = null;
+
+    @FXML private TextField txtNombres;
+    @FXML private TextField txtApellidos;
+    @FXML private TextField txtPeso;
+    @FXML private TextField txtAltura;
+    @FXML private DatePicker dpFechaNacimiento;
+    @FXML private ToggleGroup generoGroup;
+    @FXML private RadioButton rbMasculino;
+    @FXML private RadioButton rbFemenino;
+    @FXML private RadioButton rbOtro;
+
+    @FXML private TextField txtSistolica;
+    @FXML private TextField txtDiastolica;
+    @FXML private TextField txtPulsos;
+    @FXML private Label lblFechaHora;
+    @FXML private Label lblCategoriaPreview;
+    @FXML private Label lblRecomendacionPreview;
+
+    @FXML private Button btnAgregarMedicion;
+    @FXML private Button btnActualizarMedicion;
+    @FXML private Button btnCancelarMedicion;
+
+    @FXML private ComboBox<Paciente> cmbPacientes;
+    @FXML private TableView<Paciente> tvPacientes;
+    @FXML private TableView<Medicion> tvMediciones;
+
+    @FXML private TableColumn<Paciente, Integer> colPacId;
+    @FXML private TableColumn<Paciente, String> colPacNombres;
+    @FXML private TableColumn<Paciente, String> colPacApellidos;
+    @FXML private TableColumn<Paciente, LocalDate> colPacFechaNac;
+    @FXML private TableColumn<Paciente, String> colPacGenero;
+    @FXML private TableColumn<Paciente, Double> colPacPeso;
+    @FXML private TableColumn<Paciente, Double> colPacAltura;
+    @FXML private TableColumn<Paciente, Integer> colPacEdad;
+
+    @FXML private TableColumn<Medicion, LocalDateTime> colMedFechaHora;
+    @FXML private TableColumn<Medicion, Integer> colMedSistolica;
+    @FXML private TableColumn<Medicion, Integer> colMedDiastolica;
+    @FXML private TableColumn<Medicion, Integer> colMedPulsos;
+    @FXML private TableColumn<Medicion, String> colMedCategoria;
+
+    @FXML private Label lblPromedios;
+    @FXML private Label lblIMC;
+    @FXML private Label lblCategoriaIMC;
+    @FXML private Label lblPromediosGlobales;
+    @FXML private FontIcon iconoIMC;
+    @FXML private ImageView imgIMC;
+
+    @FXML private DatePicker dpFechaInicio;
+    @FXML private DatePicker dpFechaFin;
+
+
+    @Override
+    public void initialize(URL location, ResourceBundle resources) {
+        configurarTablas();
+        configurarComboBox();
+        actualizarReloj();
+        configurarListeners();
+        cargarPacientes();
+        configurarEventosTabla();
+        configurarSeleccionPaciente();
+
+        btnActualizarMedicion.setDisable(true);
+        btnCancelarMedicion.setDisable(true);
+    }
+
+    private void configurarTablas() {
+        // columnas de pacientes
+        colPacId.setCellValueFactory(new PropertyValueFactory<>("id"));
+        colPacNombres.setCellValueFactory(new PropertyValueFactory<>("nombres"));
+        colPacApellidos.setCellValueFactory(new PropertyValueFactory<>("apellidos"));
+        colPacFechaNac.setCellValueFactory(new PropertyValueFactory<>("fechaNacimiento"));
+        colPacGenero.setCellValueFactory(new PropertyValueFactory<>("genero"));
+        colPacPeso.setCellValueFactory(new PropertyValueFactory<>("peso"));
+        colPacAltura.setCellValueFactory(new PropertyValueFactory<>("altura"));
+
+        // columna de edad
+        colPacEdad.setCellValueFactory(cellData -> {
+            if (cellData != null && cellData.getValue() != null) {
+                return new javafx.beans.property.SimpleIntegerProperty(
+                        cellData.getValue().getEdad()
+                ).asObject();
+            }
+            return new javafx.beans.property.SimpleIntegerProperty(0).asObject();
+        });
+            cmbPacientes.setOnAction(event -> {
+                pacienteSeleccionado = cmbPacientes.getValue();
+            });
+        }
+
+        // para cargar mediciones con dos clicks
+    private void configurarEventosTabla() {
+        tvPacientes.setOnMouseClicked(event -> {
+            if (event.getClickCount() == 2) {
+                Paciente seleccionado = tvPacientes.getSelectionModel().getSelectedItem();
+                if (seleccionado != null) {
+                    pacienteSeleccionado = seleccionado;
+                    cmbPacientes.setValue(seleccionado);
+                    recargarMediciones();
+                }
+            }
+        });
+
+        // columnas de mediciones
+        colMedFechaHora.setCellValueFactory(new PropertyValueFactory<>("fechaHora"));
+        colMedSistolica.setCellValueFactory(new PropertyValueFactory<>("presionSistolica"));
+        colMedDiastolica.setCellValueFactory(new PropertyValueFactory<>("presionDiastolica"));
+        colMedPulsos.setCellValueFactory(new PropertyValueFactory<>("cantidadPulsos"));
+        colMedCategoria.setCellValueFactory(new PropertyValueFactory<>("categoriaPresion"));
+
+        // fecha en mediciones
+        colMedFechaHora.setCellFactory(new Callback<TableColumn<Medicion, LocalDateTime>, TableCell<Medicion, LocalDateTime>>() {
+            @Override
+            public TableCell<Medicion, LocalDateTime> call(TableColumn<Medicion, LocalDateTime> param) {
+                return new TableCell<Medicion, LocalDateTime>() {
+                    private final DateTimeFormatter formatter = DateTimeFormatter.ofPattern("dd/MM/yyyy HH:mm");
+
+                    @Override
+                    protected void updateItem(LocalDateTime item, boolean empty) {
+                        super.updateItem(item, empty);
+                        if (empty || item == null) {
+                            setText(null);
+                        } else {
+                            setText(formatter.format(item));
+                        }
+                    }
+                };
+            }
+        });
+    }
+
+    private void configurarComboBox() {
+        // cómo se muestran los pacientes en el ComboBox
+        cmbPacientes.setCellFactory(new Callback<ListView<Paciente>, ListCell<Paciente>>() {
+            @Override
+            public ListCell<Paciente> call(ListView<Paciente> param) {
+                return new ListCell<Paciente>() {
+                    @Override
+                    protected void updateItem(Paciente item, boolean empty) {
+                        super.updateItem(item, empty);
+                        if (empty || item == null) {
+                            setText(null);
+                        } else {
+                            setText(item.getNombreCompleto() + " (ID: " + item.getId() + ")");
+                        }
+                    }
+                };
+            }
+        });
+
+        cmbPacientes.setButtonCell(new ListCell<Paciente>() {
+            @Override
+            protected void updateItem(Paciente item, boolean empty) {
+                super.updateItem(item, empty);
+                if (empty || item == null) {
+                    setText(null);
+                } else {
+                    setText(item.getNombreCompleto());
+                }
+            }
+        });
+
+        cmbPacientes.setOnAction(event -> {
+            pacienteSeleccionado = cmbPacientes.getValue();
+        });
+    }
+
+    private void configurarListeners() {
+        txtSistolica.textProperty().addListener((obs, oldVal, newVal) -> actualizarCategoriaPreview());
+        txtDiastolica.textProperty().addListener((obs, oldVal, newVal) -> actualizarCategoriaPreview());
+    }
+
+    @FXML
+    private void guardarPaciente() {
+        try {
+            // validaciones
+            if (txtNombres.getText().isEmpty() || txtApellidos.getText().isEmpty() ||
+                    dpFechaNacimiento.getValue() == null || txtPeso.getText().isEmpty() ||
+                    txtAltura.getText().isEmpty()) {
+                AlertasUtil.mostrarAdvertencia("No llenaste los campos:(", "¡¡¡Todos los campos son obligatorios!!!");
+                return;
+            }
+
+            Paciente paciente = new Paciente(
+                    0,
+                    txtNombres.getText().trim(),
+                    txtApellidos.getText().trim(),
+                    dpFechaNacimiento.getValue(),
+                    obtenerGeneroSeleccionado(),
+                    Double.parseDouble(txtPeso.getText()),
+                    Double.parseDouble(txtAltura.getText())
+            );
+
+            ResultadoValidacion resultado = pacienteServicio.guardarPaciente(paciente);
+
+            if (resultado.isValido()) {
+                cargarPacientes();
+                limpiarFormularioPaciente();
+                AlertasUtil.mostrarInformacion("Éxito", resultado.getMensaje());
+            } else {
+                AlertasUtil.mostrarAdvertencia("Validación", resultado.getMensaje());
+            }
+
+        } catch (NumberFormatException e) {
+            AlertasUtil.mostrarAdvertencia("Error de formato", "Verifica que el peso y altura sean números válidos");
+        }
+    }
+
+
+
+    @FXML
+    private void agregarMedicion() {
+        if (pacienteSeleccionado == null) {
+            AlertasUtil.mostrarAdvertencia("Selección forzosa", "Selecciona un paciente");
+            return;
+        }
+
+        try {
+            if (txtSistolica.getText().isEmpty() || txtDiastolica.getText().isEmpty() ||
+                    txtPulsos.getText().isEmpty()) {
+                AlertasUtil.mostrarAdvertencia("Campos incompletos", "¡Todos los campos son obligatoriosss!");
+                return;
+            }
+
+            Medicion medicion = new Medicion(
+                    0,
+                    pacienteSeleccionado.getId(),
+                    Integer.parseInt(txtSistolica.getText()),
+                    Integer.parseInt(txtDiastolica.getText()),
+                    Integer.parseInt(txtPulsos.getText()),
+                    LocalDateTime.now()
+            );
+
+            ResultadoValidacion resultado = medicionServicio.guardarMedicion(medicion);
+
+            if (resultado.isValido()) {
+                recargarMediciones();
+                limpiarFormularioMedicion();
+                AlertasUtil.mostrarInformacion("Éxito", resultado.getMensaje());
+            } else {
+                AlertasUtil.mostrarAdvertencia("Validación", resultado.getMensaje());
+            }
+
+        } catch (NumberFormatException e) {
+            AlertasUtil.mostrarAdvertencia("Error de formato", "Los valores deben ser enteros");
+        }
+    }
+
+    @FXML
+    private void editarMedicion() {
+        medicionEnEdicion = tvMediciones.getSelectionModel().getSelectedItem();
+
+        if (medicionEnEdicion == null) {
+            AlertasUtil.mostrarAdvertencia("Selección requerida", "Selecciona una medición");
+            return;
+        }
+
+        txtSistolica.setText(String.valueOf(medicionEnEdicion.getPresionSistolica()));
+        txtDiastolica.setText(String.valueOf(medicionEnEdicion.getPresionDiastolica()));
+        txtPulsos.setText(String.valueOf(medicionEnEdicion.getCantidadPulsos()));
+
+        btnAgregarMedicion.setDisable(true);
+        btnActualizarMedicion.setDisable(false);
+        btnCancelarMedicion.setDisable(false);
+        lblRecomendacionPreview.setText("Editando medición...");
+    }
+
+    @FXML
+    private void actualizarMedicion() {
+        if (medicionEnEdicion == null) return;
+
+        try {
+            medicionEnEdicion.setPresionSistolica(Integer.parseInt(txtSistolica.getText()));
+            medicionEnEdicion.setPresionDiastolica(Integer.parseInt(txtDiastolica.getText()));
+            medicionEnEdicion.setCantidadPulsos(Integer.parseInt(txtPulsos.getText()));
+
+            ResultadoValidacion resultado = medicionServicio.actualizarMedicion(medicionEnEdicion);
+
+            if (resultado.isValido()) {
+                recargarMediciones();
+                cancelarEdicion();
+                AlertasUtil.mostrarInformacion("Éxito", resultado.getMensaje());
+            } else {
+                AlertasUtil.mostrarAdvertencia("Validación", resultado.getMensaje());
+            }
+
+        } catch (NumberFormatException e) {
+            AlertasUtil.mostrarAdvertencia("Error de formato", "Los valores deben ser enteros");
+        }
+    }
+    private void configurarSeleccionPaciente() {
+        // para elegir un paciente en la tabla
+        tvPacientes.getSelectionModel().selectedItemProperty().addListener((obs, oldVal, newVal) -> {
+            if (newVal != null) {
+                pacienteSeleccionado = newVal;
+                cmbPacientes.setValue(newVal);
+                recargarMediciones();  // ← CARGA AUTOMÁTICA
+            }
+        });
+    }
+
+    @FXML
+    private void eliminarPaciente() {
+        Paciente seleccionado = tvPacientes.getSelectionModel().getSelectedItem();
+
+        if (seleccionado == null) {
+            AlertasUtil.mostrarAdvertencia("Selección requerida", "Selecciona un paciente");
+            return;
+        }
+
+        if (AlertasUtil.mostrarConfirmacion("Confirma",
+                "¿Eliminar a " + seleccionado.getNombreCompleto() + "?")) {
+
+            ResultadoValidacion resultado = pacienteServicio.eliminarPaciente(seleccionado.getId());
+
+            if (resultado.isValido()) {
+                cargarPacientes();
+                if (pacienteSeleccionado != null &&
+                        pacienteSeleccionado.getId() == seleccionado.getId()) {
+                    pacienteSeleccionado = null;
+                    tvMediciones.getItems().clear();
+                    limpiarEstadisticas();
+                }
+                AlertasUtil.mostrarInformacion("Éxito", resultado.getMensaje());
+            } else {
+                AlertasUtil.mostrarError("Error", resultado.getMensaje());
+            }
+        }
+    }
+
+    @FXML
+    private void eliminarMedicion() {
+        Medicion seleccionada = tvMediciones.getSelectionModel().getSelectedItem();
+
+        if (seleccionada == null) {
+            AlertasUtil.mostrarAdvertencia("Selección requerida", "Seleccione una medición");
+            return;
+        }
+
+        if (AlertasUtil.mostrarConfirmacion("Confirmar", "¿Eliminar esta medición?")) {
+            ResultadoValidacion resultado = medicionServicio.eliminarMedicion(seleccionada.getId());
+
+            if (resultado.isValido()) {
+                recargarMediciones();
+                AlertasUtil.mostrarInformacion("Éxito", resultado.getMensaje());
+            } else {
+                AlertasUtil.mostrarError("Error", resultado.getMensaje());
+            }
+        }
+    }
+
+    @FXML
+    private void cargarMedicionesPaciente() {
+        if (pacienteSeleccionado == null) {
+            AlertasUtil.mostrarAdvertencia("Selección requerida", "Seleccione un paciente");
+            return;
+        }
+
+        recargarMediciones();
+    }
+
+    @FXML
+    private void calcularPromediosGlobales() {
+        LocalDate inicio = dpFechaInicio.getValue();
+        LocalDate fin = dpFechaFin.getValue();
+
+        if (inicio == null || fin == null) {
+            AlertasUtil.mostrarAdvertencia("Fechas requeridas", "Selecciona ambas fechas");
+            return;
+        }
+
+        if (fin.isBefore(inicio)) {
+            AlertasUtil.mostrarAdvertencia("Error", "La fecha de fin debe ser posterior");
+            return;
+        }
+
+        try {
+            MedicionDAOImp.Promedios p = medicionServicio.calcularPromediosPorFechas(inicio, fin);
+            if (p != null) {
+                lblPromediosGlobales.setText(estadisticaServicio.formatearPromedios(
+                        p.getSistolica(), p.getDiastolica(), p.getPulsos()
+                ));
+            } else {
+                lblPromediosGlobales.setText("No hay datos en ese rango.");
+            }
+        } catch (SQLException e) {
+            AlertasUtil.mostrarError("Error", "No se pudieron calcular los promedios:( " + e.getMessage());
+        }
+    }
+
+    @FXML
+    private void limpiarFormularioPaciente() {
+        txtNombres.clear();
+        txtApellidos.clear();
+        dpFechaNacimiento.setValue(null);
+        generoGroup.selectToggle(null);
+        txtPeso.clear();
+        txtAltura.clear();
+        pacienteSeleccionado = null;
+    }
+
+    @FXML
+    private void cancelarEdicion() {
+        limpiarFormularioMedicion();
+        medicionEnEdicion = null;
+        btnAgregarMedicion.setDisable(false);
+        btnActualizarMedicion.setDisable(true);
+        btnCancelarMedicion.setDisable(true);
+    }
+
+    private void recargarMediciones() {
+        try {
+            if (pacienteSeleccionado != null) {
+                ObservableList<Medicion> mediciones =
+                        medicionServicio.obtenerMedicionesPorPaciente(pacienteSeleccionado.getId());
+                tvMediciones.setItems(mediciones);
+                actualizarEstadisticas();
+            }
+        } catch (SQLException e) {
+            AlertasUtil.mostrarError("Error", "No se pudieron cargar las mediciones:( " + e.getMessage());
+        }
+    }
+
+    private void actualizarEstadisticas() {
+        try {
+            if (pacienteSeleccionado == null) return;
+
+            // promedios
+            MedicionDAOImp.Promedios p = medicionServicio.calcularPromedios(pacienteSeleccionado.getId());
+            if (p != null) {
+                lblPromedios.setText(estadisticaServicio.formatearPromedios(
+                        p.getSistolica(), p.getDiastolica(), p.getPulsos()
+                ));
+            }
+
+            // IMC
+            double peso = pacienteSeleccionado.getPeso();
+            double altura = pacienteSeleccionado.getAltura();
+
+            if (peso > 0 && altura > 0) {
+                double imc = peso / Math.pow(altura / 100, 2);
+                String categoria = estadisticaServicio.obtenerCategoriaIMC(imc);
+
+                lblIMC.setText(String.format("%.2f", imc));
+                lblCategoriaIMC.setText("(" + categoria + ")");
+
+                // cargar imágenes
+                Image imagen = null;
+                String rutaImagen = "";
+
+                switch (categoria) {
+                    case "Bajo peso":
+                        rutaImagen = "/imagenes/bajo_peso.jpg";
+                        break;
+                    case "Normal":
+                        rutaImagen = "/imagenes/normal.jpg";
+                        break;
+                    case "Sobrepeso":
+                        rutaImagen = "/imagenes/sobrepeso.jpg";
+                        break;
+                    case "Obesidad":
+                        rutaImagen = "/imagenes/obesidad.jpg";
+                        break;
+                }
+
+                try {
+                    if (!rutaImagen.isEmpty()) {
+                        imagen = new Image(getClass().getResourceAsStream(rutaImagen));
+                        imgIMC.setImage(imagen);
+                        imgIMC.setVisible(true);
+                        iconoIMC.setVisible(false);
+                    } else {
+                        // Fallback a icono
+                        iconoIMC.setIconLiteral(estadisticaServicio.obtenerIconoIMC(categoria));
+                        iconoIMC.setIconColor(javafx.scene.paint.Color.web(
+                                estadisticaServicio.obtenerColorIMC(categoria)
+                        ));
+                        iconoIMC.setVisible(true);
+                        imgIMC.setVisible(false);
+                    }
+                } catch (Exception e) {
+                    // Si no hay imagen, usar icono
+                    iconoIMC.setIconLiteral(estadisticaServicio.obtenerIconoIMC(categoria));
+                    iconoIMC.setIconColor(javafx.scene.paint.Color.web(
+                            estadisticaServicio.obtenerColorIMC(categoria)
+                    ));
+                    iconoIMC.setVisible(true);
+                    imgIMC.setVisible(false);
+                }
+            }
+
+        } catch (SQLException e) {
+            AlertasUtil.mostrarError("Error", "No se pudieron calcular las estadísticas: " + e.getMessage());
+        }
+    }
+
+    private void cargarPacientes() {
+        try {
+            ObservableList<Paciente> pacientes = pacienteServicio.obtenerTodosLosPacientes();
+            if (pacientes != null) {
+                tvPacientes.setItems(pacientes);
+                cmbPacientes.setItems(pacientes);
+            } else {
+                tvPacientes.setItems(FXCollections.observableArrayList());
+                cmbPacientes.setItems(FXCollections.observableArrayList());
+            }
+        } catch (SQLException e) {
+            AlertasUtil.mostrarError("Error", "No se pudieron cargar los pacientes:( " + e.getMessage());
+        }
+    }
+
+    private String obtenerGeneroSeleccionado() {
+        if (rbMasculino.isSelected()) return "M";
+        if (rbFemenino.isSelected()) return "F";
+        if (rbOtro.isSelected()) return "Otro";
+        return "";
+    }
+
+    private void limpiarFormularioMedicion() {
+        txtSistolica.clear();
+        txtDiastolica.clear();
+        txtPulsos.clear();
+        lblCategoriaPreview.setText("   ");
+        lblRecomendacionPreview.setText("Ingrese valores para ver categoría");
+    }
+
+    private void limpiarEstadisticas() {
+        lblPromedios.setText("SIS: 0.0 | DIA: 0.0 | PUL: 0.0");
+        lblIMC.setText("0.00");
+        lblCategoriaIMC.setText("(Sin datos)");
+        iconoIMC.setVisible(false);
+    }
+
+    private void actualizarReloj() {
+        DateTimeFormatter formatter = DateTimeFormatter.ofPattern("dd/MM/yyyy HH:mm:ss");
+        lblFechaHora.setText(LocalDateTime.now().format(formatter));
+    }
+
+    private void actualizarCategoriaPreview() {
+        try {
+            if (!txtSistolica.getText().isEmpty() && !txtDiastolica.getText().isEmpty()) {
+                int sis = Integer.parseInt(txtSistolica.getText());
+                int dias = Integer.parseInt(txtDiastolica.getText());
+
+                Medicion temp = new Medicion();
+                temp.setPresionSistolica(sis);
+                temp.setPresionDiastolica(dias);
+
+                String categoria = temp.getCategoriaPresion();
+                lblCategoriaPreview.setText(categoria);
+
+                // color según categoría
+                switch (categoria) {
+                    case "Normal":
+                        lblCategoriaPreview.setStyle("-fx-text-fill: #27ae60; -fx-font-weight: bold;");
+                        lblRecomendacionPreview.setText("Presión normal. Mantenga hábitos saludables.");
+                        break;
+                    case "Elevada":
+                        lblCategoriaPreview.setStyle("-fx-text-fill: #f39c12; -fx-font-weight: bold;");
+                        lblRecomendacionPreview.setText("Presión elevada. Reduzca consumo de sal.");
+                        break;
+                    case "Hipertensión Etapa 1":
+                        lblCategoriaPreview.setStyle("-fx-text-fill: #e67e22; -fx-font-weight: bold;");
+                        lblRecomendacionPreview.setText("Hipertensión Etapa 1. Consulte a su médico.");
+                        break;
+                    case "Hipertensión Etapa 2":
+                        lblCategoriaPreview.setStyle("-fx-text-fill: #c0392b; -fx-font-weight: bold;");
+                        lblRecomendacionPreview.setText("Hipertensión Etapa 2. Requiere atención médica.");
+                        break;
+                    case "Crisis Hipertensiva":
+                        lblCategoriaPreview.setStyle("-fx-text-fill: #c0392b; -fx-font-weight: bold; -fx-underline: true;");
+                        lblRecomendacionPreview.setText("¡URGENTE! Busca atención médica ASAP.");
+                        break;
+                }
+            }
+        } catch (NumberFormatException e) {
+            // mientras se escribe, ignoraremos
+        }
+    }
+}
