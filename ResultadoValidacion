@@ -1,0 +1,29 @@
+package com.proyecto.presionmonitorapp.validacion;
+
+public class ResultadoValidacion {
+    private final boolean valido;
+    private final String mensaje;
+    private final String tipo;
+
+    private ResultadoValidacion(boolean valido, String mensaje, String tipo) {
+        this.valido = valido;
+        this.mensaje = mensaje;
+        this.tipo = tipo;
+    }
+
+    public static ResultadoValidacion exito(String mensaje) {
+        return new ResultadoValidacion(true, mensaje, "EXITO");
+    }
+
+    public static ResultadoValidacion error(String mensaje) {
+        return new ResultadoValidacion(false, mensaje, "ERROR");
+    }
+
+    public static ResultadoValidacion exito() {
+        return new ResultadoValidacion(true, "Operación exitosa", "EXITO");
+    }
+
+    public boolean isValido() { return valido; }
+    public String getMensaje() { return mensaje; }
+    public String getTipo() { return tipo; }
+}
