@@ -1,0 +1,27 @@
+package com.proyecto.presionmonitorapp.validacion;
+
+import com.proyecto.presionmonitorapp.modelo.Medicion;
+
+import static com.proyecto.presionmonitorapp.validacion.ResultadoValidacion.exito;
+
+public class MedicionValidacion {
+
+    public ResultadoValidacion validar(Medicion m) {
+        if (m.getPacienteId() <= 0) {
+            return ResultadoValidacion.error("Debe seleccionar un paciente");
+        }
+        if (m.getPresionSistolica() <= 0 || m.getPresionSistolica() > 300) {
+            return ResultadoValidacion.error("Presión sistólica inválida (1-300)");
+        }
+        if (m.getPresionDiastolica() <= 0 || m.getPresionDiastolica() > 200) {
+            return ResultadoValidacion.error("Presión diastólica inválida (1-200)");
+        }
+        if (m.getCantidadPulsos() <= 0 || m.getCantidadPulsos() > 300) {
+            return ResultadoValidacion.error("Pulsos inválidos (1-300)");
+        }
+        if (m.getFechaHora() == null) {
+            return ResultadoValidacion.error("La fecha y hora son obligatorias");
+        }
+        return exito();
+    }
+}
