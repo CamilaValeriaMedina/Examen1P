@@ -1,0 +1,123 @@
+package com.proyecto.presionmonitorapp.dao;
+
+import com.proyecto.presionmonitorapp.modelo.Paciente;
+import com.proyecto.presionmonitorapp.util.DatabaseConnection;
+import javafx.collections.FXCollections;
+import javafx.collections.ObservableList;
+
+import java.sql.*;
+import java.time.LocalDate;
+
+public class PacienteDAOImp implements PacienteDAO {
+
+    @Override
+    public ObservableList<Paciente> listarTodos() {
+        ObservableList<Paciente> lista = FXCollections.observableArrayList();
+        String sql = "SELECT * FROM pacientes ORDER BY apellidos, nombres";
+
+        try (Connection conn = DatabaseConnection.getInstance().getConnection();
+             Statement stmt = conn.createStatement();
+             ResultSet rs = stmt.executeQuery(sql)) {
+
+            while (rs.next()) {
+                Paciente p = new Paciente(
+                        rs.getInt("id"),
+                        rs.getString("nombres"),
+                        rs.getString("apellidos"),
+                        rs.getDate("fecha_nacimiento").toLocalDate(),
+                        rs.getString("genero"),
+                        rs.getDouble("peso"),
+                        rs.getDouble("altura")
+                );
+                lista.add(p);
+            }
+        } catch (SQLException e) {
+            e.printStackTrace();
+        }
+        return lista;
+    }
+
+    @Override
+    public void insertar(Paciente paciente) throws SQLException {
+        String sql = "INSERT INTO pacientes (nombres, apellidos, fecha_nacimiento, genero, peso, altura) " +
+                "VALUES (?, ?, ?, ?, ?, ?)";
+
+        try (Connection conn = DatabaseConnection.getInstance().getConnection();
+             PreparedStatement pstmt = conn.prepareStatement(sql, Statement.RETURN_GENERATED_KEYS)) {
+
+            pstmt.setString(1, paciente.getNombres());
+            pstmt.setString(2, paciente.getApellidos());
+            pstmt.setDate(3, Date.valueOf(paciente.getFechaNacimiento()));
+            pstmt.setString(4, paciente.getGenero());
+            pstmt.setDouble(5, paciente.getPeso());
+            pstmt.setDouble(6, paciente.getAltura());
+
+            pstmt.executeUpdate();
+
+            // Obtener el ID generado
+            ResultSet rs = pstmt.getGeneratedKeys();
+            if (rs.next()) {
+                paciente.setId(rs.getInt(1));
+            }
+        }
+    }
+
+    @Override
+    public void actualizar(Paciente paciente) throws SQLException {
+        String sql = "UPDATE pacientes SET nombres=?, apellidos=?, fecha_nacimiento=?, " +
+                "genero=?, peso=?, altura=? WHERE id=?";
+
+        try (Connection conn = DatabaseConnection.getInstance().getConnection();
+             PreparedStatement pstmt = conn.prepareStatement(sql)) {
+
+            pstmt.setString(1, paciente.getNombres());
+            pstmt.setString(2, paciente.getApellidos());
+            pstmt.setDate(3, Date.valueOf(paciente.getFechaNacimiento()));
+            pstmt.setString(4, paciente.getGenero());
+            pstmt.setDouble(5, paciente.getPeso());
+            pstmt.setDouble(6, paciente.getAltura());
+            pstmt.setInt(7, paciente.getId());
+
+            pstmt.executeUpdate();
+        }
+    }
+
+    @Override
+    public void eliminar(int id) throws SQLException {
+        String sql = "DELETE FROM pacientes WHERE id=?";
+
+        try (Connection conn = DatabaseConnection.getInstance().getConnection();
+             PreparedStatement pstmt = conn.prepareStatement(sql)) {
+            pstmt.setInt(1, id);
+            pstmt.executeUpdate();
+        }
+    }
+
+    @Override
+    public Paciente buscarPorId(int id) {
+        String sql = "SELECT * FROM pacientes WHERE id=?";
+        Paciente paciente = null;
+
+        try (Connection conn = DatabaseConnection.getInstance().getConnection();
+             PreparedStatement pstmt = conn.prepareStatement(sql)) {
+
+            pstmt.setInt(1, id);
+            ResultSet rs = pstmt.executeQuery();
+
+            if (rs.next()) {
+                paciente = new Paciente(
+                        rs.getInt("id"),
+                        rs.getString("nombres"),
+                        rs.getString("apellidos"),
+                        rs.getDate("fecha_nacimiento").toLocalDate(),
+                        rs.getString("genero"),
+                        rs.getDouble("peso"),
+                        rs.getDouble("altura")
+                );
+            }
+        } catch (SQLException e) {
+            e.printStackTrace();
+        }
+        return paciente;
+    }
+}
