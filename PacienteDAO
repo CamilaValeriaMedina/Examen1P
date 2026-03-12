@@ -1,0 +1,13 @@
+package com.proyecto.presionmonitorapp.dao;
+
+import com.proyecto.presionmonitorapp.modelo.Paciente;
+import javafx.collections.ObservableList;
+import java.sql.SQLException;
+
+public interface PacienteDAO {
+    ObservableList<Paciente> listarTodos() throws SQLException;
+    void insertar(Paciente paciente) throws SQLException;
+    void actualizar(Paciente paciente) throws SQLException;
+    void eliminar(int id) throws SQLException;
+    Paciente buscarPorId(int id) throws SQLException;
+}
