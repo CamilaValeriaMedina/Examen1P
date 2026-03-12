@@ -1,0 +1,63 @@
+package com.proyecto.presionmonitorapp.servicio;
+
+import com.proyecto.presionmonitorapp.dao.PacienteDAO;
+import com.proyecto.presionmonitorapp.dao.PacienteDAOImp;
+import com.proyecto.presionmonitorapp.modelo.Paciente;
+import com.proyecto.presionmonitorapp.validacion.PacienteValidacion;
+import com.proyecto.presionmonitorapp.validacion.ResultadoValidacion;
+import javafx.collections.ObservableList;
+
+import java.sql.SQLException;
+
+public class PacienteServicio {
+
+    private final PacienteDAO pacienteDAO = new PacienteDAOImp();
+    private final PacienteValidacion validacion = new PacienteValidacion();
+
+    public ObservableList<Paciente> obtenerTodosLosPacientes() throws SQLException {
+        return pacienteDAO.listarTodos();
+    }
+
+    public ResultadoValidacion guardarPaciente(Paciente paciente) {
+        // 1. Validar
+        ResultadoValidacion resultado = validacion.validar(paciente);
+        if (!resultado.isValido()) {
+            return resultado;
+        }
+
+        // 2. Guardar
+        try {
+            pacienteDAO.insertar(paciente);
+            return ResultadoValidacion.exito("Paciente guardado correctamente");
+        } catch (SQLException e) {
+            return ResultadoValidacion.error("Error de BD: " + e.getMessage());
+        }
+    }
+
+    public ResultadoValidacion actualizarPaciente(Paciente paciente) {
+        ResultadoValidacion resultado = validacion.validar(paciente);
+        if (!resultado.isValido()) {
+            return resultado;
+        }
+
+        try {
+            pacienteDAO.actualizar(paciente);
+            return ResultadoValidacion.exito("Paciente actualizado correctamente");
+        } catch (SQLException e) {
+            return ResultadoValidacion.error("Error de BD: " + e.getMessage());
+        }
+    }
+
+    public ResultadoValidacion eliminarPaciente(int id) {
+        try {
+            pacienteDAO.eliminar(id);
+            return ResultadoValidacion.exito("Paciente eliminado correctamente");
+        } catch (SQLException e) {
+            return ResultadoValidacion.error("Error al eliminar: " + e.getMessage());
+        }
+    }
+
+    public Paciente buscarPacientePorId(int id) throws SQLException {
+        return pacienteDAO.buscarPorId(id);
+    }
+}
