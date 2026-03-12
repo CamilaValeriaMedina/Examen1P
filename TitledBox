@@ -1,0 +1,19 @@
+package com.proyecto.presionmonitorapp.vista;
+
+import javafx.scene.control.Label;
+import javafx.scene.layout.VBox;
+
+public class TitledBox extends VBox {
+
+    public TitledBox() {
+        super(5);
+        this.getStyleClass().add("titulo impresionante");
+    }
+
+    public final void setText(String value) {
+        Label title = new Label(value);
+        title.getStyleClass().add("ayhola");
+        this.getChildren().add(0, title);
+    }
+}
+
